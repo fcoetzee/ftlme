@@ -5,100 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FTL Me</title>
 <style>
-  body { font: 16px/1.5 system-ui, -apple-system, Roboto, sans-serif; max-width: 640px; margin: 0 auto; padding: 16px; color: #1a1a1a; background: #f4f5f7; }
-  h1 { font-size: 24px; margin: 8px 0 4px; }
-  h2 { font-size: 17px; margin: 0 0 6px; }
-  .c { background: #fff; border-radius: 12px; padding: 12px 16px; margin: 12px 0; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
-  ol, ul { padding-left: 20px; margin: 6px 0; }
+  body { font: 16px/1.5 system-ui, -apple-system, Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 16px; color: #1a1a1a; }
+  h1 { font-size: 22px; margin: 4px 0 8px; }
   li { margin: 6px 0; }
-  input { font: inherit; padding: 8px 10px; border: 1px solid #bbb; border-radius: 8px; width: 100%; box-sizing: border-box; }
-  textarea { width: 100%; box-sizing: border-box; height: 90px; font: 12px/1.3 ui-monospace, monospace; margin-top: 8px; }
-  button { font: inherit; padding: 10px 14px; border: 0; border-radius: 8px; background: #1f4e8c; color: #fff; }
-  a.bm { display: inline-block; padding: 8px 14px; background: #1f4e8c; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; }
   code { background: #eee; padding: 0 4px; border-radius: 4px; }
-  .mut { color: #666; font-size: 14px; }
-  b.k { color: #1f4e8c; }
 </style>
 </head>
 <body>
 <h1>FTL Me</h1>
-<p class="mut">A bookmark that runs on a FencingTime Live page and shows one fencer's pool and strip, pool ranking, each DE bout (opponent, strip, time) and final place. It reads the same pages you can see when signed in; nothing is sent anywhere else.</p>
-
-<div class="c">
-  <h2>1. Set up the bookmark (once)</h2>
-  <p>Fencer's last name (add the first name if two fencers share it). You can change it later in the panel.</p>
-  <input id="name" placeholder="e.g. Smith or Smith John" autocomplete="off">
-  <textarea id="code" readonly></textarea>
-  <p><button id="copy">Copy code</button> <span id="msg" class="mut"></span></p>
-  <b>Android Chrome</b>
-  <ol>
-    <li>Tap <b>Copy code</b>. If that fails, long-press in the box, then Select all and Copy.</li>
-    <li>Bookmark this page (⋮ menu, then ☆).</li>
-    <li>Open the bookmark editor (⋮, Bookmarks, long-press the new bookmark, Edit). Set the name to <code>fm</code>.</li>
-    <li>In the URL field, delete everything, <b>type</b> <code>javascript:</code> by hand, then paste right after it. Chrome removes <code>javascript:</code> from pasted text, and without it the edit is silently discarded.</li>
-    <li>Tap the back arrow to save. Reopen the bookmark: the URL must start with <code>javascript:(function</code>.</li>
-  </ol>
-  <b>Desktop Chrome</b>
-  <p>Drag this to the bookmarks bar: <a class="bm" id="drag" href="#">fm</a></p>
-  <p class="mut">The bookmark loads the current code from this site each time it runs, so updates need no new bookmark.</p>
-</div>
-
-<div class="c">
-  <h2>2. At the tournament</h2>
-  <ol>
-    <li>Sign in to fencingtimelive.com and open the tournament schedule, or any page of your event. From the schedule it finds the event the fencer is entered in, or asks which one if there are several.</li>
-    <li>Tap the address bar, type <code>fm</code>, and tap the suggestion with the <b>star</b>. The Google search suggestion only searches. Tapping the bookmark in the Bookmarks list does nothing on Android.</li>
-    <li>Leave the tab open. One run lasts the whole tournament.</li>
-  </ol>
-</div>
-
-<div class="c">
-  <h2>3. Refreshing</h2>
-  <ul>
-    <li><b class="k">Auto-refresh every 30 s</b> is on by default. Untick it to stop; the choice is remembered.</li>
-    <li><b class="k">Refresh</b> updates at once.</li>
-    <li><b>Pool details</b> and <b>Full tableau</b> open in a new tab, so the panel keeps running in its own tab.</li>
-    <li>If you closed the panel, navigated away, or the phone reloaded the page, run <code>fm</code> again.</li>
-    <li><b class="k">change</b> switches to another fencer. <b class="k">Close</b> removes the panel and shows the FTL page underneath.</li>
-  </ul>
-</div>
-
-<div class="c">
-  <h2>What shows when</h2>
-  <p class="mut">FTL posts each stage only when it is ready, so cards fill in over the day.</p>
-  <ul>
-    <li><b>Entry</b>: before pools are posted, confirms the fencer is in the entry list.</li>
-    <li><b>Pool</b>: pool number, strip and start time, bouts so far, a link to the pool sheet, and how many pools are complete.</li>
-    <li><b>Pool ranking</b>: place, V/M and indicator, marked provisional until every pool is in, then Advanced or Eliminated.</li>
-    <li><b>Direct elimination</b>: once the tableau is posted, the next bout (strip, opponent, time) and every result so far. <b class="k">Show me in the tableau</b> opens the bracket scrolled to the fencer's latest position.</li>
-    <li><b>Final result</b>: place once the fencer is out or has won.</li>
-  </ul>
-  <p class="mut">Only the first pool round and first tableau of an event are read.</p>
-</div>
-
-<script>
-  const HOST = 'https://fcoetzee.github.io/ftlme/ftlme.js';
-  const nameEl = document.getElementById('name');
-  const code = document.getElementById('code');
-  const drag = document.getElementById('drag');
-  nameEl.value = localStorage.getItem('fmName') || '';
-  function build() {
-    const n = nameEl.value.trim().replace(/[^\p{L} '\-.]/gu, '').replace(/'/g, "\\'");
-    localStorage.setItem('fmName', nameEl.value.trim());
-    const url = "javascript:(function(){" + (n ? "window.ftlmeDefault='" + n + "';" : '') +
-      "var s=document.createElement('script');s.onerror=function(){alert('ftlme: could not load the script')};" +
-      "s.onload=function(){setTimeout(function(){if(!document.getElementById('ftlme'))alert('ftlme: loaded, but no panel')},1500)};" +
-      "s.src='" + HOST + "?'+Date.now();document.body.appendChild(s)})()";
-    code.value = url.slice('javascript:'.length);
-    drag.href = url;
-  }
-  nameEl.oninput = build;
-  build();
-  document.getElementById('copy').onclick = async () => {
-    const msg = document.getElementById('msg');
-    try { await navigator.clipboard.writeText(code.value); msg.textContent = 'Copied.'; }
-    catch (e) { code.focus(); code.select(); msg.textContent = 'Selected: now long-press and Copy.'; }
-  };
-</script>
+<ol>
+  <li>Sign in to fencingtimelive.com and open the tournament schedule or your event.</li>
+  <li>Tap the address bar, type <code>ftlme</code>, and tap the suggestion with the star.</li>
+  <li>Leave the tab open. It refreshes every 30 s; <b>Refresh</b> updates at once.</li>
+  <li>Pool details and Full tableau open in a new tab. If the panel is gone, run <code>ftlme</code> again.</li>
+  <li><b>change</b> tracks another fencer.</li>
+</ol>
 </body>
 </html>
