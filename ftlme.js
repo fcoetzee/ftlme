@@ -25,6 +25,13 @@
 #${NS} .mut{color:#777;font-size:14px}
 #${NS} .err{color:#b00020}
 #${NS} a{color:#1f4e8c;font-weight:600}
+#${NS} .tv{position:relative;overflow:auto;max-height:70vh;margin-top:10px;border:1px solid #ddd;border-radius:8px;background:#fff;-webkit-overflow-scrolling:touch}
+#${NS} .tv table{width:auto;border-collapse:collapse}
+#${NS} .tv td{border:0;padding:1px 8px;font-size:13px;line-height:1.3;white-space:nowrap}
+#${NS} .tv tr:first-child td{font-weight:700;background:#f4f5f7;position:sticky;top:0}
+#${NS} .tv .tref{color:#777;font-size:12px}
+#${NS} .tv td.me{background:#fff3b0}
+#${NS} .tv td#${NS}here{background:#ffd54f;outline:2px solid #e0a800}
 #${NS} table{border-collapse:collapse;width:100%}
 #${NS} td{padding:6px 4px;border-top:1px solid #eee;vertical-align:top}
 #${NS} tr:first-child td{border-top:0}
@@ -38,7 +45,7 @@
 <div class="bar"><b id="${NS}w" style="flex:1 1 auto;font-size:18px"></b><a href="#" id="${NS}e" style="font-size:14px">change</a>
 <button id="${NS}r">Refresh</button><button class="g" id="${NS}x">Close</button></div>
 <div class="bar" id="${NS}f" style="display:none"><input type="text" id="${NS}n" placeholder="Name: last, or first and last"><button id="${NS}s">OK</button></div>
-<div class="bar"><label><input type="checkbox" id="${NS}a"> Auto-refresh every 60 s</label></div>
+<div class="bar"><label><input type="checkbox" id="${NS}a"> Auto-refresh every 30 s</label></div>
 <h1 id="${NS}t"></h1><div id="${NS}o"></div></div>`;
   document.body.appendChild(box);
   const $ = (s) => box.querySelector('#' + NS + s);
@@ -70,6 +77,7 @@
   const getM = (u) => (memo[u] = memo[u] || get(u));
   const evInPath = (location.pathname.match(/^\/(?:events|pools|tableaus|rounds)\/\w+\/([0-9A-F]{32})/) || [])[1];
   let chosen = null;
+  let showTab = false, jump = false;
   async function pickEvent() {
     /* On an event page, use that event. On a tournament schedule, find the events whose entry list has the name. */
     if (evInPath) return { ev: evInPath, title: document.title };
@@ -188,6 +196,7 @@
       if (c0 < 0) continue;
       const bouts = [];
       let status = '';
+      let lc = c0, lk = k;
       for (let c = c0; c < nc - 1; c++) {
         const round = heads[c] || 'Round';
         const opp = fencer(at(c, k ^ 1));
@@ -200,7 +209,7 @@
           const sc = p.length === 2 ? (won ? p[0] + '–' + p[1] : p[1] + '–' + p[0]) : info.score;
           bouts.push({ round, opp, res: won ? 'W' : 'L', sc, ...info });
           if (!won) { status = 'out:' + round; break; }
-          k >>= 1;
+          k >>= 1; lc = c + 1; lk = k;
           continue;
         }
         let pending = null;
@@ -213,7 +222,11 @@
         break;
       }
       if (!status && c0 >= 0) status = 'won';
-      return { tree: tree.name, heads, bouts, status };
+      for (const r of rows) for (const cell of r.cells) { const f = cell.querySelector('.tcln') && fencer(cell); if (f && !f.bye && isMe(f.name)) cell.classList.add('me'); }
+      const here = at(lc, lk);
+      if (here) here.id = NS + 'here';
+      tbl.querySelectorAll('a').forEach((a) => a.removeAttribute('href'));
+      return { tree: tree.name, heads, bouts, status, html: tbl.outerHTML };
     }
     return seeded ? null : { empty: true };
   }
@@ -278,7 +291,7 @@
 <div>${m && m[2] ? 'Starts ' + esc(m[2]) + ' · ' : ''}You are #${esc(p.pos)} of ${p.size}</div>
 ${m ? '' : '<div class="mut">Strip not assigned yet.</div>'}
 <div class="mut">Bouts so far: ${p.v}V ${p.d}D${p.res[3] ? ` · TS ${esc(p.res[2])} TR ${esc(p.res[3])} Ind ${esc(p.res[4])}` : ''}</div>
-${p.det ? `<div style="margin-top:6px"><a href="${esc(p.det)}">Pool details ›</a></div>` : ''}
+${p.det ? `<div style="margin-top:6px"><a href="${esc(p.det)}" target="_blank" rel="noopener">Pool details ›</a></div>` : ''}
 <div class="mut" style="margin-top:4px">${p.done} of ${p.n} pools complete</div>
 ${p.hits > 1 ? `<div class="L" style="margin-top:4px">${p.hits} fencers match "${esc(nameIn.value)}". Tap change and add the first name.</div>` : ''}`);
     }
@@ -313,14 +326,26 @@ ${r.prediction ? `<div class="${/Elim/i.test(r.prediction) ? 'L' : 'W'}">${esc(r
       const nx = D.v.bouts.find((b) => b.next);
       const top = nx ? `<div class="big">Next: ${nx.strip ? 'Strip ' + stripTag(nx.strip) : 'strip TBA'}</div><div>vs ${oppText(nx)}${nx.time ? ' · ' + esc(nx.time) : ''}</div>`
         : D.v.status === 'won' ? '<div class="big W">Won the event</div>' : /^out:/.test(D.v.status) ? `<div class="big">${/^Finals?$/i.test(D.v.status.slice(4)) ? 'Lost the final' : 'Out in the ' + esc(D.v.status.slice(4))}</div>` : '';
-      h += card('Direct elimination', `${top}<table style="margin-top:8px">${rowsH}</table>`);
+      const tv = showTab ? `<div class="tv" id="${NS}tv">${D.v.html}</div>` : '';
+      h += card('Direct elimination', `${top}<table style="margin-top:8px">${rowsH}</table><div class="bar" style="margin:10px 0 0"><button class="g" id="${NS}sh">${showTab ? 'Hide tableau' : 'Show me in the tableau'}</button><a href="${esc(L.tabs[0])}" target="_blank" rel="noopener">Full tableau ›</a></div>${tv}`);
     }
 
     const finished = (D && D.v && !D.v.empty && /^(out|won)/.test(D.v.status || '')) || elimPools;
     if (F && F.v && finished) h += card('Final result', `<div class="big">${ord(F.v.place)} of ${F.v.total}</div>`);
 
     h += `<div class="mut">Updated ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</div>`;
+    const old = $('tv');
+    const keep = old ? [old.scrollTop, old.scrollLeft] : null;
     out.innerHTML = h;
+    const sh = $('sh');
+    if (sh) sh.onclick = () => { showTab = !showTab; jump = showTab; go(); };
+    const tv = $('tv');
+    if (tv) {
+      const me = $('here');
+      if (jump || !keep) { if (me) { const a = me.getBoundingClientRect(), t = tv.getBoundingClientRect(); tv.scrollTop += a.top - t.top - tv.clientHeight / 2 + a.height / 2; tv.scrollLeft += a.left - t.left - 20; } }
+      else { tv.scrollTop = keep[0]; tv.scrollLeft = keep[1]; }
+      jump = false;
+    }
   }
 
   const go = () => run().catch((e) => { $('o').innerHTML = card('Error', `<span class="err">${esc(e.message || e)}</span>`); });
@@ -331,7 +356,7 @@ ${r.prediction ? `<div class="${/Elim/i.test(r.prediction) ? 'L' : 'W'}">${esc(r
   $('e').onclick = (e) => { e.preventDefault(); $('f').style.display = 'flex'; nameIn.focus(); nameIn.select(); };
   $('x').onclick = () => { clearInterval(box._timer); box.remove(); };
   $('a').checked = localStorage.getItem('ftlmeAuto') !== '0';
-  const setAuto = () => { clearInterval(box._timer); localStorage.setItem('ftlmeAuto', $('a').checked ? '1' : '0'); if ($('a').checked) box._timer = setInterval(go, 60000); };
+  const setAuto = () => { clearInterval(box._timer); localStorage.setItem('ftlmeAuto', $('a').checked ? '1' : '0'); if ($('a').checked) box._timer = setInterval(go, 30000); };
   $('a').onchange = setAuto;
   setAuto();
   go();
