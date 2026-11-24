@@ -335,4 +335,4 @@ ${r.prediction ? `<div class="${/Elim/i.test(r.prediction) ? 'L' : 'W'}">${esc(r
   $('a').onchange = setAuto;
   setAuto();
   go();
-})();
+})().catch((e) => { alert('ftlme error: ' + (e && e.message || e)); });
