@@ -76,7 +76,7 @@
   let memo = {};
   const getM = (u) => (memo[u] = memo[u] || get(u));
   const evInPath = (location.pathname.match(/^\/(?:events|pools|tableaus|rounds)\/\w+\/([0-9A-F]{32})/) || [])[1];
-  let chosen = null;
+  let chosen = null, nChoices = 0;
   let showTab = false, jump = false;
   async function pickEvent() {
     /* On an event page, use that event. On a tournament schedule, find the events whose entry list has the name. */
@@ -86,6 +86,7 @@
     const hits = (await Promise.all(evs.map(async ([ev, title]) => {
       try { const j = await getJ('/events/competitors/data/' + ev); return Array.isArray(j) && j.some((x) => isMe(x.name)) ? { ev, title } : null; } catch (e) { return null; }
     }))).filter(Boolean);
+    nChoices = hits.length;
     if (hits.length === 1) chosen = hits[0];
     return chosen || { n: evs.length, hits };
   }
@@ -274,7 +275,7 @@
       L.tabs[0] ? safe(findDE(L.tabs[0])) : null,
       L.res[0] ? safe(finalPlace(L.res[0])) : null,
     ]);
-    let h = '';
+    let h = nChoices > 1 && !evInPath ? `<div class="bar"><button class="g" id="${NS}bk">‹ All ${nChoices} events</button></div>` : '';
     const poolsDone = P && P.v && P.v.n > 0 && P.v.done === P.v.n;
     if (E && E.v && (!P || !P.v || !P.v.found)) {
       const me = E.v.me;
@@ -337,6 +338,8 @@ ${r.prediction ? `<div class="${/Elim/i.test(r.prediction) ? 'L' : 'W'}">${esc(r
     const old = $('tv');
     const keep = old ? [old.scrollTop, old.scrollLeft] : null;
     out.innerHTML = h;
+    const bk = $('bk');
+    if (bk) bk.onclick = () => { chosen = null; showTab = false; out.innerHTML = ''; go(); };
     const sh = $('sh');
     if (sh) sh.onclick = () => { showTab = !showTab; jump = showTab; go(); };
     const tv = $('tv');
